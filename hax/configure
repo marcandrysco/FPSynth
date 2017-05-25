@@ -79,7 +79,7 @@ opt()
 ## end custom options ##
 
 
-##### marc_andrysco configure script, rev 6 #####
+##### marc_andrysco configure script, rev 7 #####
 
 # special characters
 nl="`printf '\nX'`" ; nl="${nl%X}"
@@ -299,12 +299,6 @@ while [ "$#" -gt 0 ] ; do
   esac
 done
 
-# pkgconfig args
-if [ "$pkgcfg" ] ; then
-      cflags="${cflags} \`pkg-config --cflags ${pkgcfg% }\`"
-      ldflags="${ldflags} \`pkg-config --libs ${pkgcfg% }\`"
-fi
-
 # sanity check
 test "$release" && test "$debug" && fail "cannot use both --debug and --release"
 
@@ -320,6 +314,12 @@ ld="${toolchain}gcc"
 # process configuration information
 target="" ; obj="" ; hdr="" ; hdrs="" ; inc="" ; deps="" ; install=""
 setconf
+
+# pkgconfig args
+if [ "$pkgcfg" ] ; then
+      cflags="${cflags} \`pkg-config --cflags ${pkgcfg% }\`"
+      ldflags="${ldflags} \`pkg-config --libs ${pkgcfg% }\`"
+fi
 
 test -z "$target" && fail "missing target"
 test -z "$obj" && fail "missing object files"

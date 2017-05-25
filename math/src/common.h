@@ -4,11 +4,11 @@
 /*
  * common headers
  */
-#include "config.h"
-#include <hax.h>
-#include <real.h>
 #include <gmp.h>
-#include <sndfile.h>
+#include <mpfr.h>
+#include <hax.h>
+
+#include "config.h"
 #include "inc.h"
 
 #endif

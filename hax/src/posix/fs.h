@@ -5,6 +5,7 @@
  * file system declarations
  */
 bool fs_exists(const char *path);
+bool fs_isdir(const char *path);
 
 char *fs_mkdir(const char *path, uint16_t perm);
 bool fs_trymkdir(const char *path, uint16_t perm);

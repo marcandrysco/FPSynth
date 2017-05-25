@@ -38,19 +38,23 @@ struct sys_task_t *sys_notify_async(struct sys_notify_t *notify, sys_change_f fu
 
 /**
  * Asynchronously poll a change notifier on a single path.
- *   @notify: the notifier.
- *   @func: the change function.
- *   @arg: the argument.
- *   &returns: the task.
+ *   @task: Ref. The output task.
+ *   @notify: The notifier.
+ *   @func: The change function.
+ *   @arg: The argument.
+ *   &returns: The task.
  */
-struct sys_task_t *sys_notify_async1(const char *path, sys_change_f func, void *arg)
+char *sys_notify_async1(struct sys_task_t **task, const char *path, sys_change_f func, void *arg)
 {
+#define onexit sys_notify_delete(notify);
 	struct sys_notify_t *notify;
 
 	notify = sys_notify_new();
-	chkwarn(sys_notify_add(notify, path, NULL));
+	chkfail(sys_notify_add(notify, path, NULL));
 
-	return sys_notify_async(notify, func, arg);
+	*task = sys_notify_async(notify, func, arg);
+	return NULL;
+#undef onexit
 }
 
 /**
@@ -60,6 +64,7 @@ struct sys_task_t *sys_notify_async1(const char *path, sys_change_f func, void *
  */
 static void notify_task(sys_fd_t fd, void *arg)
 {
+	struct sys_change_t *change;
 	struct notify_async_t info;
 
 	info = *(struct notify_async_t *)arg;
@@ -75,8 +80,9 @@ static void notify_task(sys_fd_t fd, void *arg)
 		if(fds[0].revents)
 			break;
 		else if(fds[1].revents) {
-			sys_notify_proc(info.notify, fds + 1);
-			info.func(NULL, info.arg);
+			change = sys_notify_proc(info.notify, fds + 1);
+			if(change != NULL)
+				info.func(change, info.arg);
 		}
 	}
 

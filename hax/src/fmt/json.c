@@ -891,6 +891,27 @@ bool json_get_uint16(struct json_t *json, uint16_t *out)
 
 
 /**
+ * Check if a value is a double that falls in a range.
+ *   @json: The JSON value.
+ *   @low: The low end of the range.
+ *   @high: The high end of the range.
+ *   &returns: The number if valid, NAN otherwise.
+ */
+double json_chk_range(struct json_t *json, double low, double high)
+{
+	double val;
+
+	if(json->type != json_num_v)
+		return NAN;
+
+	val = json->data.num;
+	if((val < low) || (val > high))
+		return NAN;
+
+	return val;
+}
+
+/**
  * Verify a JSON value is an array with the proper length.
  *   @json: The JSON value.
  *   @len: The length. Negative indicates any length is acceptable.
@@ -942,6 +963,12 @@ struct json_obj_t *json_chk_obj(struct json_t *json, ...)
 }
 
 
+/**
+ * Retrieve data from a JSON object matching a format.
+ *   @json: The JSON value.
+ *   @fmt: The format string.
+ *   @...: The parsed arguments.
+ */
 char *json_getf(struct json_t *json, const char *restrict fmt, ...)
 {
 	char *err;
@@ -1043,6 +1070,27 @@ char *json_vgetfptr(struct json_t *json, const char *restrict *restrict fmt, str
 
 			(*fmt)++;
 		}
+		break;
+
+	case '*':
+		(*fmt)++;
+		*va_arg(arglist->args, struct json_t **) = json;
+		break;
+
+	case 'A':
+		if(json->type != json_arr_v)
+			return mprintf("Expected array.");
+
+		(*fmt)++;
+		*va_arg(arglist->args, struct json_arr_t **) = json->data.arr;
+		break;
+
+	case 'O':
+		if(json->type != json_obj_v)
+			return mprintf("Expected object.");
+
+		(*fmt)++;
+		*va_arg(arglist->args, struct json_obj_t **) = json->data.obj;
 		break;
 
 	case 'b':

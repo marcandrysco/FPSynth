@@ -3,25 +3,22 @@
 ## begin configuration options ##
 setconf()
 {
-  bin_target "cirtool"
+  lib_target "libreal.so"
+  hdr_target "real.h"
   inc_target "src/inc.h"
 
-  c_src "src/main.c"
-
-  c_src "src/extra.c"
-
   h_src "src/defs.h"
-  c_src "src/cir.c"
-  c_src "src/gen.c"
-  c_src "src/lang.c"
 
-  lib_dep "real"
-  lib_dep "hax"
-  lib_dep "gmp"
-  lib_dep "sndfile"
-  lib_dep "dl"
-  lib_dep "m"
-  lib_dep "pthread"
+  c_src "src/real/arith.c"
+  c_src "src/real/expr.c"
+  c_src "src/real/frac.c"
+  c_src "src/real/func.c"
+  c_src "src/real/print.c"
+  c_src "src/real/rel.c"
+  c_src "src/real/simpl.c"
+
+  c_src "src/lin/mat.c"
+  c_src "src/lin/vec.c"
 }
 ## end configuration options ##
 
@@ -33,7 +30,7 @@ opt()
 ## end custom options ##
 
 
-##### marc_andrysco configure script, rev 6 #####
+##### marc_andrysco configure script, rev 8 #####
 
 # special characters
 nl="`printf '\nX'`" ; nl="${nl%X}"
@@ -94,9 +91,6 @@ inc_target()
   chk_space "$1" || fail "inc_target parameter '$1' has spaces"
 
   inc="$1"
-  install="${install}${nl}${tab}install --mode 0644 -D $1 \$(INCDIR)/$1"
-
-  :>"$inc"
 }
 
 # Add a C source file to the Makefile.
@@ -253,12 +247,6 @@ while [ "$#" -gt 0 ] ; do
   esac
 done
 
-# pkgconfig args
-if [ "$pkgcfg" ] ; then
-      cflags="${cflags} \`pkg-config --cflags ${pkgcfg% }\`"
-      ldflags="${ldflags} \`pkg-config --libs ${pkgcfg% }\`"
-fi
-
 # sanity check
 test "$release" && test "$debug" && fail "cannot use both --debug and --release"
 
@@ -274,6 +262,12 @@ ld="${toolchain}gcc"
 # process configuration information
 target="" ; obj="" ; hdr="" ; hdrs="" ; inc="" ; deps="" ; install=""
 setconf
+
+# pkgconfig args
+if [ "$pkgcfg" ] ; then
+      cflags="${cflags} \`pkg-config --cflags ${pkgcfg% }\`"
+      ldflags="${ldflags} \`pkg-config --libs ${pkgcfg% }\`"
+fi
 
 test -z "$target" && fail "missing target"
 test -z "$obj" && fail "missing object files"

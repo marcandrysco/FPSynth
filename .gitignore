@@ -23,4 +23,8 @@ inc.h
 hax/hax.h
 hax/test/hax-test
 
+math/real.h
+
+tool/cirtool
+
 /build

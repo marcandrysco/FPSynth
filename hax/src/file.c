@@ -197,10 +197,24 @@ struct io_file_t io_file_str(const char *str)
 
 	return (struct io_file_t){ (void *)ptr, &iface };
 }
+
+/**
+ * Create an input file from a string.
+ *   @str: The string.
+ *   &returns: The file.
+ */
+struct io_file_t io_file_strptr(const char **str)
+{
+	static const struct io_file_i iface = { str_read, str_write, delete_noop };
+
+	return (struct io_file_t){ (void *)str, &iface };
+}
+
 static size_t str_write(void *ref, const void *buf, size_t nbytes)
 {
 	return 0;
 }
+
 static size_t str_read(void *ref, void *buf, size_t nbytes)
 {
 	size_t i;
@@ -211,6 +225,7 @@ static size_t str_read(void *ref, void *buf, size_t nbytes)
 			break;
 
 		*dest = **ptr;
+		dest++;
 		(*ptr)++;
 	}
 
@@ -260,4 +275,27 @@ static void buf_close(void *ref)
 
 	*buf->ptr = realloc(*buf->ptr, *buf->idx);
 	free(buf);
+}
+
+
+/**
+ * Read the first n-bytes of a file.
+ *   @path: The file path.
+ *   @buf: The buffer.
+ *   @nbytes: The number of bytes.
+ *   &returns: The number of bytes read, or `-1` on failure.
+ */
+ssize_t io_file_head(const char *path, void *buf, size_t nbytes)
+{
+	FILE *file;
+	ssize_t rd;
+
+	file = fopen(path, "r");
+	if(file == NULL)
+		return -1;
+
+	rd = fread(buf, 1, nbytes, file);
+	fclose(file);
+
+	return rd;
 }

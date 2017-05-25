@@ -80,6 +80,21 @@ static inline void io_file_close(struct io_file_t file)
 	file.iface->close(file.ref);
 }
 
+/**
+ * Retrieve a byte from the file.
+ *   @file: The file.
+ *   &returns: The byte, or negative on eof.
+ */
+static inline int io_file_getbyte(struct io_file_t file)
+{
+	char ch;
+
+	if(io_file_read(file, &ch, 1) == 0)
+		return -1;
+
+	return ch;
+}
+
 
 /*
  * file declarations
@@ -89,6 +104,12 @@ struct io_file_t io_file_accum(char **str);
 struct io_file_t io_file_wrap(FILE *file);
 struct io_file_t io_file_fd(sys_fd_t fd);
 struct io_file_t io_file_str(const char *str);
+struct io_file_t io_file_strptr(const char **str);
 struct io_file_t io_file_buf(void **ptr, size_t *nbytes);
+
+/*
+ * file helper declarations
+ */
+ssize_t io_file_head(const char *path, void *buf, size_t nbytes);
 
 #endif

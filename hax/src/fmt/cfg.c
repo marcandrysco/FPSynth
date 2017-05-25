@@ -199,6 +199,25 @@ char *cfg_read_uint16vec(char **value, unsigned int n, uint16_t **vec, unsigned 
 }
 
 /**
+ * Read a 64-bit unsigned integer from a value.
+ *   @value: The value.
+ *   @ptr: The pointer.
+ *   &returns: Error.
+ */
+char *cfg_read_uint64(const char *value, uint64_t *ptr)
+{
+	unsigned long long val;
+
+	errno = 0;
+	val = strtoull(value, (char **)&value, 0);
+	if((errno != 0) || (*value != '\0'))
+		return mprintf("Invalid value.");
+
+	*ptr = val;
+	return NULL;
+}
+
+/**
  * Read a boolean from a value.
  *   @value: The value.
  *   @ptr: The pointer.
@@ -289,6 +308,10 @@ char *cfg_readf(struct cfg_line_t *line, const char *restrict fmt, ...)
 				chkfail(cfg_read_uint16(*val, va_arg(args, uint16_t *)));
 				fmt += 2; val++, n--;
 			}
+			else if((fmt[0] == '6') && (fmt[1] == '4')) {
+				chkfail(cfg_read_uint64(*val, va_arg(args, uint64_t *)));
+				fmt += 2; val++, n--;
+			}
 			else if(fmt[2] == '*') {
 				unsigned int i, arr[n], **vec;
 
@@ -374,6 +397,16 @@ void cfg_write_uint16vec(FILE *file, uint16_t *vec, unsigned int len)
 }
 
 /**
+ * Write an unsigned 64-bit integer.
+ *   @file: The file.
+ *   @val: The value.
+ */
+void cfg_write_uint64(FILE *file, uint64_t val)
+{
+	fprintf(file, " \""PRIu64"\"", val);
+}
+
+/**
  * Write boolean.
  *   @file: The file.
  *   @val: The value.
@@ -444,6 +477,8 @@ void cfg_writef(FILE *file, const char *restrict key, const char *restrict fmt, 
 		}
 		else if((endptr = strprefix(fmt, "u16")) != NULL)
 			cfg_write_uint16(file, va_arg(args, int));
+		else if((endptr = strprefix(fmt, "u64")) != NULL)
+			cfg_write_uint64(file, va_arg(args, int));
 		else if((endptr = strprefix(fmt, "u")) != NULL)
 			cfg_write_uint(file, va_arg(args, unsigned int));
 		else if((endptr = strprefix(fmt, "b")) != NULL)

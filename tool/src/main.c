@@ -2,295 +2,6 @@
 
 
 /**
- * Wire structure.
- *   @port: The first port.
- */
-struct cir_wire_t {
-	struct cir_port_t *port;
-};
-
-/**
- * Port structure.
- *   @node: The owner node.
- *   @wire: The parent wire.
- *   @port: The next port on a wire.
- */
-struct cir_port_t {
-	struct cir_node_t *node;
-	struct cir_wire_t *wire;
-	struct cir_port_t *next;
-};
-
-/**
- * Node type enumerator.
- *   @cir_input_v: Input.
- *   @cir_output_v: Output.
- *   @cir_value_v: Constant value.
- *   @cir_res_v: Resistor.
- *   @cir_cap_v: Capacitor.
- */
-enum cir_node_e {
-	cir_input_v,
-	cir_output_v,
-	cir_value_v,
-	cir_res_v,
-	cir_cap_v
-};
-
-/**
- * Node data union.
- *   @flt: Floating-point value.
- */
-union cir_node_u {
-	double flt;
-};
-
-/**
- * Note structure.
- *   @tag: The node tag.
- *   @type: The type.
- *   @data: The data.
- *   @port: The port array.
- *   @cnt: The number of ports.
- */
-struct cir_node_t {
-	char *tag;
-	enum cir_node_e type;
-	union cir_node_u data;
-
-	struct cir_port_t *port;
-	unsigned int cnt;
-};
-
-
-/*
- * circuit declarations
- */
-void cir_connect(struct cir_port_t *left, struct cir_port_t *right);
-void cir_disconnect(struct cir_port_t *port);
-
-struct avltree_t cir_nodes(struct cir_node_t *node);
-void cir_nodes_iter(struct cir_node_t *node, struct avltree_t *tree);
-
-struct avltree_t cir_wires(struct cir_node_t *node);
-void cir_wires_iter(struct cir_wire_t *wire, struct avltree_t *tree);
-
-
-/**
- * Create a new node.
- *   @tag: The tag.
- *   @type: The type.
- *   @data: The data.
- *   @cnt: The number of ports.
- *   &returns: The node.
- */
-struct cir_node_t *cir_node_new(char *tag, enum cir_node_e type, union cir_node_u data, unsigned int cnt)
-{
-	unsigned int i;
-	struct cir_node_t *node;
-
-	node = malloc(sizeof(struct cir_node_t));
-	node->tag = tag;
-	node->type = type;
-	node->data = data;
-	node->cnt = cnt;
-	node->port = malloc(cnt * sizeof(struct cir_port_t));
-
-	for(i = 0; i < cnt; i++) {
-		node->port[i].node = node;
-		node->port[i].wire = malloc(sizeof(struct cir_wire_t));
-		node->port[i].wire->port = &node->port[i];
-		node->port[i].next = NULL;
-	}
-
-	return node;
-}
-
-/**
- * Delete a node.
- *   @node: The node.
- */
-void cir_node_delete(struct cir_node_t *node)
-{
-	unsigned int i;
-
-	for(i = 0; i < node->cnt; i++) {
-		cir_disconnect(&node->port[i]);
-		free(node->port[i].wire);
-	}
-
-	erase(node->tag);
-	free(node->port);
-	free(node);
-}
-
-
-/**
- * Create an input node.
- *   @tag: The tag.
- *   &returns: The node.
- */
-struct cir_node_t *cir_node_input(char *tag)
-{
-	return cir_node_new(tag, cir_input_v, (union cir_node_u){ }, 1);
-}
-
-/**
- * Create an output node.
- *   @tag: The tag.
- *   &returns: The node.
- */
-struct cir_node_t *cir_node_output(char *tag)
-{
-	return cir_node_new(tag, cir_output_v, (union cir_node_u){ }, 1);
-}
-
-/**
- * Create a value node.
- *   @flt: The floating-point value.
- *   &returns: The node.
- */
-struct cir_node_t *cir_node_value(double flt)
-{
-	return cir_node_new(NULL, cir_value_v, (union cir_node_u){ .flt = flt }, 1);
-}
-
-
-/**
- * Connect two ports together.
- *   @left: The left port.
- *   @right: The right port.
- */
-void cir_connect(struct cir_port_t *left, struct cir_port_t *right)
-{
-	struct cir_port_t *cur;
-	struct cir_wire_t *wire, *prev;
-
-	wire = left->wire;
-	prev = right->wire;
-
-	while(right != NULL) {
-		cur = right;
-		right = cur->next;
-
-		cur->wire = wire;
-		cur->next = wire->port;
-		wire->port = cur;
-	}
-
-	free(prev);
-}
-
-/**
- * Disconnect a port from a wire.
- *   @port: The port.
- */
-void cir_disconnect(struct cir_port_t *port)
-{
-	struct cir_port_t **iter;
-
-	if((port->wire->port == port) && (port->next == NULL))
-		return;
-
-	iter = &port->wire->port;
-	while(*iter != port)
-		iter = &(*iter)->next;
-
-	*iter = (*iter)->next;
-
-	port->wire = malloc(sizeof(struct cir_wire_t));
-	port->wire->port = port;
-	port->next = NULL;
-}
-
-
-/**
- * Generate a dot file for the circuit.
- *   @node: The node.
- *   @path: The path.
- */
-void cir_dot(struct cir_node_t *node, const char *path)
-{
-}
-
-
-/**
- * Compute a tree of all nodes.
- *   @node: The starting node.
- *   &returns: The tree.
- */
-struct avltree_t cir_nodes(struct cir_node_t *node)
-{
-	struct avltree_t tree;
-
-	tree = avltree_init(compare_ptr, delete_noop);
-	cir_nodes_iter(node, &tree);
-
-	return tree;
-}
-
-/**
- * Iterate over all nodes, adding to a tree.
- *   @node: The initial node.
- *   @tree: The tree.
- */
-void cir_nodes_iter(struct cir_node_t *node, struct avltree_t *tree)
-{
-	unsigned int i;
-	struct cir_port_t *port;
-
-	if(avltree_lookup(tree, node) != NULL)
-		return;
-
-	avltree_insert(tree, node, node);
-
-	for(i = 0; i < node->cnt; i++) {
-		for(port = node->port[i].wire->port; port != NULL; port = port->next)
-			cir_nodes_iter(port->node, tree);
-	}
-}
-
-/**
- * Compute a tree of all wires.
- *   @node: The starting node.
- *   &returns: The tree.
- */
-struct avltree_t cir_wires(struct cir_node_t *node)
-{
-	unsigned int i;
-	struct avltree_t tree;
-
-	tree = avltree_init(compare_ptr, delete_noop);
-
-	for(i = 0; i < node->cnt; i++)
-		cir_wires_iter(node->port[i].wire, &tree);
-
-	return tree;
-}
-
-/**
- * Iterate over all wires, adding to a tree.
- *   @wire: The initial wire.
- *   @tree: The tree.
- */
-void cir_wires_iter(struct cir_wire_t *wire, struct avltree_t *tree)
-{
-	unsigned int i;
-	struct cir_port_t *port;
-
-	if(avltree_lookup(tree, wire) != NULL)
-		return;
-
-	avltree_insert(tree, wire, wire);
-
-	for(port = wire->port; port != NULL; port = port->next) {
-		for(i = 0; i < port->node->cnt; i++)
-			cir_wires_iter(port->node->port[i].wire, tree);
-	}
-}
-
-
-/**
  * Load an array of sample data.
  *   @path: The path.
  *   @arr: Ref. The output array.
@@ -355,7 +66,7 @@ void test1(void)
 
 	double s[1];
 
-	for(k = 0; k < 100000; k++) {
+	for(k = 0; k < 1000000; k++) {
 		struct fl_inst_t *inst;
 		double diff, max = 0.0;
 
@@ -389,6 +100,319 @@ void test1(void)
 	free(cmp);
 }
 
+/*
+void r_sys_gather(struct r_sys_t *sys, struct r_var_t **vars)
+{
+}
+*/
+
+
+/*
+ * local declarations
+ */
+static void gather_sys(struct rvec_var_t *var, struct r_sys_t *sys);
+static void gather_rel(struct rvec_var_t *var, struct r_rel_t *rel);
+static void gather_expr(struct rvec_var_t *var, struct r_expr_t *expr);
+
+
+/**
+ * Gather a vector of variables from a system of equations.
+ *   @sys: The system of equations.
+ *   &returns: The variable vector.
+ */
+struct rvec_var_t *rvec_gather_sys(struct r_sys_t *sys)
+{
+	struct rvec_var_t *var;
+
+	var = rvec_var_new();
+	gather_sys(var, sys);
+
+	return var;
+}
+
+
+/**
+ * Gather variables from a system of equations.
+ *   @var: The variable vector.
+ *   @sys: The system.
+ */
+static void gather_sys(struct rvec_var_t *var, struct r_sys_t *sys)
+{
+	while(sys != NULL) {
+		gather_rel(var, sys->rel);
+		sys = sys->next;
+	}
+}
+
+/**
+ * Gather variables from a relation.
+ *   @var: The variable vector.
+ *   @rel: The relation.
+ */
+static void gather_rel(struct rvec_var_t *var, struct r_rel_t *rel)
+{
+	gather_expr(var, rel->left);
+	gather_expr(var, rel->right);
+}
+
+/**
+ * Gather variables from an expression.
+ *   @var: The variable vector.
+ *   @expr: The expression.
+ */
+static void gather_expr(struct rvec_var_t *var, struct r_expr_t *expr)
+{
+	switch(expr->type) {
+	case r_unk_v:
+	case r_flt_v:
+	case r_num_v:
+	case r_const_v:
+		break;
+
+	case r_var_v:
+		if(rvec_var_idx(var, expr->data.var) < 0)
+			rvec_var_add(var, r_var_copy(expr->data.var));
+
+		break;
+
+	case r_neg_v:
+		gather_expr(var, expr->data.expr);
+		break;
+
+	case r_add_v:
+	case r_sub_v:
+	case r_mul_v:
+	case r_div_v:
+		gather_expr(var, expr->data.op2.left);
+		gather_expr(var, expr->data.op2.right);
+		break;
+
+	case r_sum_v:
+		{
+			struct r_list_t *list;
+
+			for(list = expr->data.list; list != NULL; list = list->next)
+				gather_expr(var, list->expr);
+		}
+		break;
+	}
+}
+
+
+struct r_expr_t *r_deriv_expr(struct r_expr_t *expr, struct r_var_t *var);
+
+struct r_expr_t *r_const_expr(struct r_expr_t *expr);
+
+
+/**
+ * Compute the derivative of an expression.
+ *   @expr: The expression.
+ *   @var: The independent variable.
+ *   &returns: The derivative.
+ */
+struct r_expr_t *r_deriv_expr(struct r_expr_t *expr, struct r_var_t *var)
+{
+	switch(expr->type) {
+	case r_unk_v:
+	case r_flt_v:
+	case r_num_v:
+	case r_const_v:
+		return r_expr_zero();
+
+	case r_var_v:
+		return r_expr_flt((expr->data.var == var) ? 1.0 : 0.0);
+
+	case r_neg_v:
+		return r_expr_neg(r_deriv_expr(expr->data.expr, var));
+
+	case r_add_v:
+	case r_sub_v:
+		{
+			struct r_expr_t *left, *right;
+
+			left = r_deriv_expr(expr->data.op2.left, var);
+			right = r_deriv_expr(expr->data.op2.right, var);
+
+			switch(expr->type) {
+			case r_add_v: return r_expr_add(left, right);
+			case r_sub_v: return r_expr_sub(left, right);
+			default: __builtin_unreachable();
+			}
+		}
+
+	case r_mul_v:
+		{
+			struct r_expr_t *left, *right, *res[2];
+
+			left = expr->data.op2.left;
+			right = expr->data.op2.right;
+
+			res[0] = r_expr_mul(r_expr_copy(left), r_deriv_expr(right, var));
+			res[1] = r_expr_mul(r_deriv_expr(left, var), r_expr_copy(right));
+
+			return r_expr_add(res[0], res[1]);
+		}
+
+	case r_div_v:
+		fatal("stub");
+
+	case r_sum_v:
+		{
+			struct r_list_t *list, *res, **iter;
+
+			res = r_list_new();
+			iter = &res;
+
+			for(list = expr->data.list; list != NULL; list = list->next)
+				iter = r_list_add(iter, r_deriv_expr(list->expr, var));
+
+			switch(expr->type) {
+			case r_sum_v: return r_expr_sum(res);
+			default: __builtin_unreachable();
+			}
+		}
+	}
+
+	__builtin_unreachable();
+}
+
+/**
+ * Compute the constant from an expression.
+ *   @expr: The expression.
+ *   &returns: The constant.
+ */
+struct r_expr_t *r_const_expr(struct r_expr_t *expr)
+{
+	switch(expr->type) {
+	case r_unk_v:
+	case r_flt_v:
+	case r_num_v:
+	case r_const_v:
+		return r_expr_copy(expr);
+
+	case r_var_v:
+		return r_expr_zero();
+
+	case r_neg_v:
+		return r_expr_neg(r_const_expr(expr->data.expr));
+
+	case r_add_v:
+	case r_sub_v:
+	case r_mul_v:
+	case r_div_v:
+		{
+			struct r_expr_t *left, *right;
+
+			left = r_const_expr(expr->data.op2.left);
+			right = r_const_expr(expr->data.op2.right);
+
+			switch(expr->type) {
+			case r_add_v: return r_expr_add(left, right);
+			case r_sub_v: return r_expr_sub(left, right);
+			case r_mul_v: return r_expr_mul(left, right);
+			case r_div_v: return r_expr_div(left, right);
+			default: __builtin_unreachable();
+			}
+		}
+
+	case r_sum_v:
+		{
+			struct r_list_t *list, *res, **iter;
+
+			res = r_list_new();
+			iter = &res;
+
+			for(list = expr->data.list; list != NULL; list = list->next)
+				iter = r_list_add(iter, r_const_expr(list->expr));
+
+			switch(expr->type) {
+			case r_sum_v: return r_expr_sum(res);
+			default: __builtin_unreachable();
+			}
+		}
+	}
+
+	__builtin_unreachable();
+}
+
+
+void test2(void)
+{
+	struct cir_node_t *in, *out, *gnd, *res1, *res2;
+
+	in = cir_node_input(mprintf("In"));
+	out = cir_node_output(mprintf("Out"));
+	gnd = cir_node_gnd();
+	res1 = cir_node_res(100.0);
+	res2 = cir_node_res(200.0);
+
+	cir_connect(&in->port[0], &res1->port[0]);
+	cir_connect(&res1->port[1], &res2->port[0]);
+	cir_connect(&res1->port[1], &out->port[0]);
+	cir_connect(&res2->port[1], &gnd->port[0]);
+
+	{
+		struct r_sys_t *sys, *iter;
+		struct rvec_var_t *var;
+		unsigned int i, j;
+
+		sys = cir_system(in);
+		var = rvec_gather_sys(sys);
+
+		r_sys_norm(sys);
+		r_sys_print(sys, io_file_wrap(stdout));
+
+		if(var->len != r_sys_cnt(sys))
+			fatal("Invalid system of equations: %d variables for %d equations.", var->len, r_sys_cnt(sys));
+
+		struct rmat_expr_t *mat;
+		struct rvec_expr_t *vec, *res;
+
+		vec = rvec_expr_new(var->len);
+		mat = rmat_expr_new(var->len, var->len);
+
+		printf("%u::%u\n", var->len, r_sys_cnt(sys));
+		for(iter = sys, j = 0; iter != NULL; iter = iter->next, j++) {
+			for(i = 0; i < var->len; i++)
+				r_expr_set(rmat_expr_get(mat, j, i), r_fold_expr_clr(r_deriv_expr(iter->rel->left, var->arr[i])));
+
+			r_expr_set(&vec->arr[j], r_fold_expr_clr(r_expr_neg(r_const_expr(iter->rel->left))));
+		}
+
+		rmat_expr_dump(mat); printf("\n");
+
+		struct rmat_expr_t *inv;
+
+		inv = rmat_expr_inv(mat);
+		inv = rmat_fold_expr_clr(inv);
+		rmat_expr_dump(inv); printf("\n");
+		//printf("%C\n", r_expr_chunk(inv));
+
+		rvec_expr_dump(vec); printf("\n");
+
+		printf(":: %d %d\n", inv->width, inv->height);
+		res = rvec_fold_expr_clr(rvec_expr_mul(inv, vec));
+
+		for(i = 0; i < res->len; i++) {
+			printf("%s: %C\n", var->arr[i]->id, r_expr_chunk(res->arr[i]));
+		}
+
+
+		rmat_expr_delete(mat);
+		rmat_expr_delete(inv);
+		rvec_expr_delete(vec);
+		rvec_expr_delete(res);
+		rvec_var_delete(var);
+		r_sys_delete(sys);
+	}
+
+	cir_node_delete(in);
+	cir_node_delete(out);
+	cir_node_delete(gnd);
+	cir_node_delete(res1);
+	cir_node_delete(res2);
+}
+
 
 /**
  * Main entry point.
@@ -398,7 +422,7 @@ void test1(void)
  */
 int main(int argc, char **argv)
 {
-	test1();
+	test2();
 
 	/*
 	struct cir_node_t *in, *out;

@@ -993,3 +993,34 @@ bool http_asset_proc(struct http_asset_t *assets, const char *path, struct http_
 
 	return true;
 }
+
+/**
+ * Send an asset as a response.
+ *   @path: The asset path.
+ *   @type: The content type.
+ *   @args: The response arguments.
+ *   &returns: True if successful.
+ */
+bool http_asset_send(const char *path, const char *type, struct http_args_t *args)
+{
+	FILE *file;
+	size_t rd;
+	uint8_t buf[4096];
+
+	file = fopen(path, "r");
+	if(file == NULL)
+		return false;
+
+	while(true) {
+		rd = fread(buf, 1, 4096, file);
+		if(rd == 0)
+			break;
+
+		io_file_write(args->file, buf, rd);
+	}
+
+	fclose(file);
+	http_head_add(&args->resp, "Content-Type", type);
+
+	return true;
+}

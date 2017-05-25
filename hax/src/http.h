@@ -125,5 +125,6 @@ struct http_asset_t {
  * asset declarations
  */
 bool http_asset_proc(struct http_asset_t *assets, const char *path, struct http_args_t *args, const char *prefix);
+bool http_asset_send(const char *path, const char *type, struct http_args_t *args);
 
 #endif

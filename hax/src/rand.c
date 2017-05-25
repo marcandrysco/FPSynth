@@ -45,7 +45,7 @@ uint32_t m_rand_u32(struct m_rand_t *rand)
 	  rand->z = rand->w;
 	  rand->w = rand->w ^ (rand->w >> 19) ^ (t ^ (t >> 8));
 
-	  return rand->w * 2902771;
+	  return rand->w;
 }
 
 /**

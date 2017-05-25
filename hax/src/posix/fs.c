@@ -4,12 +4,27 @@
 
 /**
  * Check if a file path exists.
- *   @path: The paht.
- *   &returns: The exists.
+ *   @path: The path.
+ *   &returns: True if the file exists.
  */
 bool fs_exists(const char *path)
 {
 	return access(path, F_OK) != -1;
+}
+
+/**
+ * Check if a path points to a directory.
+ *   @path: The path.
+ *   &returns: True if a directory.
+ */
+bool fs_isdir(const char *path)
+{
+	struct stat info;
+
+	if(stat(path, &info) < 0)
+		return false;
+
+	return S_ISDIR(info.st_mode);
 }
 
 
