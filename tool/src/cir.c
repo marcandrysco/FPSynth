@@ -515,7 +515,7 @@ struct r_sys_t *cir_system(struct cir_node_t *root)
 				left = r_var_copy(cir_env_get(env, &node[i]->port[0]));
 				right = r_var_copy(cir_env_get(env, &node[i]->port[1]));
 
-				iter = r_sys_add(iter, r_rel_eq(r_expr_add(r_expr_var(left), r_expr_var(right)), r_expr_flt(0.0)));
+				iter = r_sys_add(iter, r_rel_eq(r_expr_add(r_expr_var(left), r_expr_var(right)), r_expr_zero()));
 
 				src = r_var_copy(cir_env_get(env, node[i]->port[0].wire));
 				dest = r_var_copy(cir_env_get(env, node[i]->port[1].wire));
@@ -525,7 +525,32 @@ struct r_sys_t *cir_system(struct cir_node_t *root)
 			break;
 
 		case cir_cap_v:
-			fatal("stub");
+			{
+				struct r_var_t *in, *out, *src, *dest, *diff;
+
+				diff = r_var_new(strdup("w"));
+				in = cir_env_get(env, &node[i]->port[0]);
+				out = cir_env_get(env, &node[i]->port[1]);
+				src = cir_env_get(env, node[i]->port[0].wire);
+				dest = cir_env_get(env, node[i]->port[1].wire);
+
+				iter = r_sys_add(iter, r_rel_eq(r_expr_vardup(diff), r_expr_sub(r_expr_vardup(src), r_expr_vardup(dest))));
+				iter = r_sys_add(iter, r_rel_eq(r_expr_add(r_expr_vardup(in), r_expr_vardup(out)), r_expr_zero()));
+				iter = r_sys_add(iter, r_rel_eq(r_expr_vardup(in),
+					r_expr_mul(
+						r_expr_flt(node[i]->data.flt),
+						r_expr_add(
+							r_expr_mul(
+								r_expr_div(r_expr_flt(2.0), r_expr_const(strdup("dt"))),
+								r_expr_vardup(diff)
+							),
+							r_expr_const(strdup("s'"))
+						)
+					)
+				));
+
+				r_var_delete(diff);
+			}
 			break;
 		}
 	}

@@ -10,12 +10,16 @@ setconf()
   h_src "src/defs.h"
 
   c_src "src/real/arith.c"
+  c_src "src/real/calc.c"
   c_src "src/real/expr.c"
+  c_src "src/real/eval.c"
   c_src "src/real/frac.c"
   c_src "src/real/func.c"
   c_src "src/real/print.c"
   c_src "src/real/rel.c"
   c_src "src/real/simpl.c"
+
+  c_src "src/real/parse.c"
 
   c_src "src/lin/mat.c"
   c_src "src/lin/vec.c"

@@ -79,14 +79,24 @@ struct r_expr_t *r_fold_expr_clr(struct r_expr_t *expr)
 				r_expr_set(&expr, r_expr_copy(expr->data.op2.right));
 			else if(r_expr_is_one(expr->data.op2.right))
 				r_expr_set(&expr, r_expr_copy(expr->data.op2.left));
+			else if(r_expr_is_flt(expr->data.op2.left, -1.0))
+				r_expr_set(&expr, r_expr_neg(r_expr_copy(expr->data.op2.right)));
+			else if(r_expr_is_flt(expr->data.op2.right, -1.0))
+				r_expr_set(&expr, r_expr_neg(r_expr_copy(expr->data.op2.left)));
+			else if((expr->data.op2.left->type == r_neg_v) && (expr->data.op2.right->type == r_neg_v))
+				r_expr_set(&expr, r_expr_mul(r_expr_copy(expr->data.op2.left->data.expr), r_expr_copy(expr->data.op2.right->data.expr)));
 
 			break;
 		
 		case r_div_v:
 			if((expr->data.op2.left->type == r_flt_v) && (expr->data.op2.right->type == r_flt_v))
 				r_expr_set(&expr, r_expr_flt(expr->data.op2.left->data.flt / expr->data.op2.right->data.flt));
+			else if(r_expr_is_zero(expr->data.op2.left))
+				r_expr_set(&expr, r_expr_zero());
 			else if(r_expr_is_one(expr->data.op2.right))
 				r_expr_set(&expr, r_expr_copy(expr->data.op2.left));
+			else if((expr->data.op2.left->type == r_neg_v) && (expr->data.op2.right->type == r_neg_v))
+				r_expr_set(&expr, r_expr_div(r_expr_copy(expr->data.op2.left->data.expr), r_expr_copy(expr->data.op2.right->data.expr)));
 
 			break;
 

@@ -103,6 +103,7 @@ struct r_expr_t *r_expr_list(enum r_expr_e type, struct r_list_t *list);
 
 struct r_expr_t *r_expr_zero(void);
 struct r_expr_t *r_expr_one(void);
+struct r_expr_t *r_expr_vardup(struct r_var_t *var);
 struct r_expr_t *r_expr_neg(struct r_expr_t *expr);
 struct r_expr_t *r_expr_sub(struct r_expr_t *left, struct r_expr_t *right);
 struct r_expr_t *r_expr_add(struct r_expr_t *left, struct r_expr_t *right);
@@ -112,6 +113,7 @@ struct r_expr_t *r_expr_sum(struct r_list_t *list);
 
 bool r_expr_is_zero(struct r_expr_t *expr);
 bool r_expr_is_one(struct r_expr_t *expr);
+bool r_expr_is_flt(struct r_expr_t *expr, double flt);
 bool r_expr_has_unk(struct r_expr_t *expr);
 
 void r_expr_print(const struct r_expr_t *expr, struct io_file_t file);
@@ -169,6 +171,8 @@ struct io_chunk_t r_num_chunk(const struct r_num_t *num);
 struct r_list_t *r_list_new(void);
 struct r_list_t *r_list_copy(const struct r_list_t *list);
 void r_list_delete(struct r_list_t *list);
+
+unsigned int r_list_len(struct r_list_t *list);
 
 struct r_list_t **r_list_add(struct r_list_t **list, struct r_expr_t *expr);
 struct r_expr_t *r_list_remove(struct r_list_t **list);

@@ -1,5 +1,41 @@
 #include "common.h"
 
+/**
+ * Instruction sturcture.
+ *   @next: The next instruction.
+ */
+struct ir_inst_t {
+	struct ir_inst_t *next;
+};
+
+/**
+ * Instruction type enumerator.
+ *   @ir_arg_v: Argument.
+ *   @ir_br_v: Branch.
+ *   @ir_ret_v: Return.
+ *   @ir_inst_n: Instruction.
+ */
+enum ir_inst_e {
+	ir_arg_v,
+	ir_br_v,
+	ir_ret_v,
+	ir_inst_n
+};
+
+/**
+ * Block structure.
+ *   @nargs: The number of arguments.
+ *   @inst: The instruction.
+ *   @next: The next block.
+ */
+struct ir_block_t {
+	unsigned int nargs;
+
+	struct ir_inst_t *inst;
+	struct ir_block_t *next;
+};
+
+
 
 /**
  * Load an array of sample data.
@@ -199,143 +235,6 @@ static void gather_expr(struct rvec_var_t *var, struct r_expr_t *expr)
 }
 
 
-struct r_expr_t *r_deriv_expr(struct r_expr_t *expr, struct r_var_t *var);
-
-struct r_expr_t *r_const_expr(struct r_expr_t *expr);
-
-
-/**
- * Compute the derivative of an expression.
- *   @expr: The expression.
- *   @var: The independent variable.
- *   &returns: The derivative.
- */
-struct r_expr_t *r_deriv_expr(struct r_expr_t *expr, struct r_var_t *var)
-{
-	switch(expr->type) {
-	case r_unk_v:
-	case r_flt_v:
-	case r_num_v:
-	case r_const_v:
-		return r_expr_zero();
-
-	case r_var_v:
-		return r_expr_flt((expr->data.var == var) ? 1.0 : 0.0);
-
-	case r_neg_v:
-		return r_expr_neg(r_deriv_expr(expr->data.expr, var));
-
-	case r_add_v:
-	case r_sub_v:
-		{
-			struct r_expr_t *left, *right;
-
-			left = r_deriv_expr(expr->data.op2.left, var);
-			right = r_deriv_expr(expr->data.op2.right, var);
-
-			switch(expr->type) {
-			case r_add_v: return r_expr_add(left, right);
-			case r_sub_v: return r_expr_sub(left, right);
-			default: __builtin_unreachable();
-			}
-		}
-
-	case r_mul_v:
-		{
-			struct r_expr_t *left, *right, *res[2];
-
-			left = expr->data.op2.left;
-			right = expr->data.op2.right;
-
-			res[0] = r_expr_mul(r_expr_copy(left), r_deriv_expr(right, var));
-			res[1] = r_expr_mul(r_deriv_expr(left, var), r_expr_copy(right));
-
-			return r_expr_add(res[0], res[1]);
-		}
-
-	case r_div_v:
-		fatal("stub");
-
-	case r_sum_v:
-		{
-			struct r_list_t *list, *res, **iter;
-
-			res = r_list_new();
-			iter = &res;
-
-			for(list = expr->data.list; list != NULL; list = list->next)
-				iter = r_list_add(iter, r_deriv_expr(list->expr, var));
-
-			switch(expr->type) {
-			case r_sum_v: return r_expr_sum(res);
-			default: __builtin_unreachable();
-			}
-		}
-	}
-
-	__builtin_unreachable();
-}
-
-/**
- * Compute the constant from an expression.
- *   @expr: The expression.
- *   &returns: The constant.
- */
-struct r_expr_t *r_const_expr(struct r_expr_t *expr)
-{
-	switch(expr->type) {
-	case r_unk_v:
-	case r_flt_v:
-	case r_num_v:
-	case r_const_v:
-		return r_expr_copy(expr);
-
-	case r_var_v:
-		return r_expr_zero();
-
-	case r_neg_v:
-		return r_expr_neg(r_const_expr(expr->data.expr));
-
-	case r_add_v:
-	case r_sub_v:
-	case r_mul_v:
-	case r_div_v:
-		{
-			struct r_expr_t *left, *right;
-
-			left = r_const_expr(expr->data.op2.left);
-			right = r_const_expr(expr->data.op2.right);
-
-			switch(expr->type) {
-			case r_add_v: return r_expr_add(left, right);
-			case r_sub_v: return r_expr_sub(left, right);
-			case r_mul_v: return r_expr_mul(left, right);
-			case r_div_v: return r_expr_div(left, right);
-			default: __builtin_unreachable();
-			}
-		}
-
-	case r_sum_v:
-		{
-			struct r_list_t *list, *res, **iter;
-
-			res = r_list_new();
-			iter = &res;
-
-			for(list = expr->data.list; list != NULL; list = list->next)
-				iter = r_list_add(iter, r_const_expr(list->expr));
-
-			switch(expr->type) {
-			case r_sum_v: return r_expr_sum(res);
-			default: __builtin_unreachable();
-			}
-		}
-	}
-
-	__builtin_unreachable();
-}
-
-
 void test2(void)
 {
 	struct cir_node_t *in, *out, *gnd, *res1, *res2;
@@ -343,8 +242,8 @@ void test2(void)
 	in = cir_node_input(mprintf("In"));
 	out = cir_node_output(mprintf("Out"));
 	gnd = cir_node_gnd();
-	res1 = cir_node_res(100.0);
-	res2 = cir_node_res(200.0);
+	res1 = cir_node_res(1.0);
+	res2 = cir_node_cap(0.08);
 
 	cir_connect(&in->port[0], &res1->port[0]);
 	cir_connect(&res1->port[1], &res2->port[0]);
@@ -390,13 +289,38 @@ void test2(void)
 
 		rvec_expr_dump(vec); printf("\n");
 
-		printf(":: %d %d\n", inv->width, inv->height);
 		res = rvec_fold_expr_clr(rvec_expr_mul(inv, vec));
 
+		struct r_expr_t *calc = NULL;
+
 		for(i = 0; i < res->len; i++) {
+			res->arr[i] = r_fold_expr_clr(res->arr[i]);
+
+			if(strcmp(var->arr[i]->id, "Out") == 0)
+				calc = res->arr[i];
+
 			printf("%s: %C\n", var->arr[i]->id, r_expr_chunk(res->arr[i]));
 		}
 
+		struct r_env_t *env;
+
+		env = r_env_new();
+		r_env_put(&env, "dt", 1.0 / 8000.0);
+
+		r_env_put(&env, "In", 1.0);
+		r_env_put(&env, "s'", 0.0);
+
+		double out;
+
+		for(int i = 0; i < 10; i++) {
+			chkabort(r_eval_expr(calc, env, &out));
+			r_env_put(&env, "In", 1.0);
+			printf("out: %.4g\n", out);
+		}
+
+		printf("out: %C\n", r_expr_chunk(calc));
+
+		r_env_delete(env);
 
 		rmat_expr_delete(mat);
 		rmat_expr_delete(inv);
@@ -422,6 +346,17 @@ void test2(void)
  */
 int main(int argc, char **argv)
 {
+	/*
+	struct r_expr_t *expr;
+
+	expr = r_expr_mul(r_expr_neg(r_expr_one()), r_expr_const(strdup("A")));
+	printf("[%C]\n", r_expr_chunk(expr));
+	expr = r_fold_expr_clr(expr);
+	printf("[%C]\n", r_expr_chunk(expr));
+	r_expr_delete(expr);
+	exit(0);
+	*/
+
 	test2();
 
 	/*

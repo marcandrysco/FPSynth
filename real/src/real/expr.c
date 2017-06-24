@@ -179,7 +179,17 @@ struct r_expr_t *r_expr_zero(void)
  */
 struct r_expr_t *r_expr_one(void)
 {
-	return r_expr_flt(0.0);
+	return r_expr_flt(1.0);
+}
+
+/**
+ * Create a variable expression, copying the variable.
+ *   @var: The variable.
+ *   &returns: The expression.
+ */
+struct r_expr_t *r_expr_vardup(struct r_var_t *var)
+{
+	return r_expr_var(r_var_copy(var));
 }
 
 /**
@@ -264,7 +274,18 @@ bool r_expr_is_zero(struct r_expr_t *expr)
  */
 bool r_expr_is_one(struct r_expr_t *expr)
 {
-	return (expr->type == r_flt_v) && (expr->data.flt == 0.0);
+	return (expr->type == r_flt_v) && (expr->data.flt == 1.0);
+}
+
+/**
+ * Check if an expression is a given float.
+ *   @expr: The expression.
+ *   @flt: The floating-poitn value.
+ *   &returns: True if one.
+ */
+bool r_expr_is_flt(struct r_expr_t *expr, double flt)
+{
+	return (expr->type == r_flt_v) && (expr->data.flt == flt);
 }
 
 /**
@@ -484,6 +505,22 @@ void r_list_delete(struct r_list_t *list)
 		r_expr_delete(tmp->expr);
 		free(tmp);
 	}
+}
+
+
+/**
+ * Compute the length of a list.
+ *   @list: The list.
+ *   &returns: The length.
+ */
+unsigned int r_list_len(struct r_list_t *list)
+{
+	unsigned int n = 0;
+
+	while(list != NULL)
+		list = list->next, n++;;
+
+	return n;
 }
 
 
