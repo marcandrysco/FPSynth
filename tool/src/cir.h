@@ -68,6 +68,7 @@ struct cir_node_t {
  */
 struct cir_node_t *cir_node_new(enum cir_node_e type, union cir_node_u data, unsigned int cnt);
 void cir_node_delete(struct cir_node_t *node);
+void cir_node_erase(struct cir_node_t *node);
 
 struct cir_node_t *cir_node_input(char *tag);
 struct cir_node_t *cir_node_output(char *tag);

@@ -12,8 +12,10 @@ setconf()
 
   h_src "src/defs.h"
   c_src "src/cir.c"
+  c_src "src/dat.c"
   c_src "src/gen.c"
   c_src "src/lang.c"
+  c_src "src/parse.c"
 
   lib_dep "real"
   lib_dep "hax"

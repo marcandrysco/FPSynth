@@ -35,7 +35,15 @@ struct rvec_var_t {
 struct rvec_var_t *rvec_var_new(void);
 void rvec_var_delete(struct rvec_var_t *var);
 
-int rvec_var_idx(struct rvec_var_t *var, struct r_var_t *elem);
+int rvec_var_idx(struct rvec_var_t *var, const char *id);
 void rvec_var_add(struct rvec_var_t *var, struct r_var_t *elem);
+
+void rvec_var_dump(struct rvec_var_t *var);
+
+
+/*
+ * compound vector declarations
+ */
+struct rvec_var_t *rvec_gather_sys(struct r_sys_t *sys);
 
 #endif

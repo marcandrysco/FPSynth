@@ -136,105 +136,6 @@ void test1(void)
 	free(cmp);
 }
 
-/*
-void r_sys_gather(struct r_sys_t *sys, struct r_var_t **vars)
-{
-}
-*/
-
-
-/*
- * local declarations
- */
-static void gather_sys(struct rvec_var_t *var, struct r_sys_t *sys);
-static void gather_rel(struct rvec_var_t *var, struct r_rel_t *rel);
-static void gather_expr(struct rvec_var_t *var, struct r_expr_t *expr);
-
-
-/**
- * Gather a vector of variables from a system of equations.
- *   @sys: The system of equations.
- *   &returns: The variable vector.
- */
-struct rvec_var_t *rvec_gather_sys(struct r_sys_t *sys)
-{
-	struct rvec_var_t *var;
-
-	var = rvec_var_new();
-	gather_sys(var, sys);
-
-	return var;
-}
-
-
-/**
- * Gather variables from a system of equations.
- *   @var: The variable vector.
- *   @sys: The system.
- */
-static void gather_sys(struct rvec_var_t *var, struct r_sys_t *sys)
-{
-	while(sys != NULL) {
-		gather_rel(var, sys->rel);
-		sys = sys->next;
-	}
-}
-
-/**
- * Gather variables from a relation.
- *   @var: The variable vector.
- *   @rel: The relation.
- */
-static void gather_rel(struct rvec_var_t *var, struct r_rel_t *rel)
-{
-	gather_expr(var, rel->left);
-	gather_expr(var, rel->right);
-}
-
-/**
- * Gather variables from an expression.
- *   @var: The variable vector.
- *   @expr: The expression.
- */
-static void gather_expr(struct rvec_var_t *var, struct r_expr_t *expr)
-{
-	switch(expr->type) {
-	case r_unk_v:
-	case r_flt_v:
-	case r_num_v:
-	case r_const_v:
-		break;
-
-	case r_var_v:
-		if(rvec_var_idx(var, expr->data.var) < 0)
-			rvec_var_add(var, r_var_copy(expr->data.var));
-
-		break;
-
-	case r_neg_v:
-		gather_expr(var, expr->data.expr);
-		break;
-
-	case r_add_v:
-	case r_sub_v:
-	case r_mul_v:
-	case r_div_v:
-		gather_expr(var, expr->data.op2.left);
-		gather_expr(var, expr->data.op2.right);
-		break;
-
-	case r_sum_v:
-		{
-			struct r_list_t *list;
-
-			for(list = expr->data.list; list != NULL; list = list->next)
-				gather_expr(var, list->expr);
-		}
-		break;
-	}
-}
-
-
 void test2(void)
 {
 	struct cir_node_t *in, *out, *gnd, *res1, *res2;
@@ -291,13 +192,15 @@ void test2(void)
 
 		res = rvec_fold_expr_clr(rvec_expr_mul(inv, vec));
 
-		struct r_expr_t *calc = NULL;
+		struct r_expr_t *calc = NULL, *s1 = NULL;
 
 		for(i = 0; i < res->len; i++) {
 			res->arr[i] = r_fold_expr_clr(res->arr[i]);
 
 			if(strcmp(var->arr[i]->id, "Out") == 0)
 				calc = res->arr[i];
+			else if(strcmp(var->arr[i]->id, "s1") == 0)
+				s1 = res->arr[i];
 
 			printf("%s: %C\n", var->arr[i]->id, r_expr_chunk(res->arr[i]));
 		}
@@ -305,17 +208,21 @@ void test2(void)
 		struct r_env_t *env;
 
 		env = r_env_new();
-		r_env_put(&env, "dt", 1.0 / 8000.0);
+		r_env_put(&env, "dt", 1.0 / 80.0);
 
-		r_env_put(&env, "In", 1.0);
-		r_env_put(&env, "s'", 0.0);
+		r_env_put(&env, "In", 0.0);
+		r_env_put(&env, "s1'", 0.0);
 
-		double out;
+		double out, tmp;
 
-		for(int i = 0; i < 10; i++) {
+		for(int i = 0; i < 50; i++) {
 			chkabort(r_eval_expr(calc, env, &out));
-			r_env_put(&env, "In", 1.0);
+			chkabort(r_eval_expr(s1, env, &tmp));
+			r_env_put(&env, "s1'", tmp);
 			printf("out: %.4g\n", out);
+
+			if(i == 0) r_env_put(&env, "In", 1.0);
+			if(i == 30) printf("::\n"), r_env_put(&env, "In", -1.0);
 		}
 
 		printf("out: %C\n", r_expr_chunk(calc));
@@ -346,6 +253,8 @@ void test2(void)
  */
 int main(int argc, char **argv)
 {
+	dat_cir1();
+
 	/*
 	struct r_expr_t *expr;
 
@@ -357,7 +266,7 @@ int main(int argc, char **argv)
 	exit(0);
 	*/
 
-	test2();
+	//test2();
 
 	/*
 	struct cir_node_t *in, *out;

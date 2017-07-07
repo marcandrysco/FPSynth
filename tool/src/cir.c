@@ -59,6 +59,16 @@ void cir_node_delete(struct cir_node_t *node)
 	free(node);
 }
 
+/**
+ * Erase a node if not null.
+ *   @node: The node.
+ */
+void cir_node_erase(struct cir_node_t *node)
+{
+	if(node != NULL)
+		cir_node_delete(node);
+}
+
 
 /**
  * Create an input node.
@@ -534,17 +544,33 @@ struct r_sys_t *cir_system(struct cir_node_t *root)
 				src = cir_env_get(env, node[i]->port[0].wire);
 				dest = cir_env_get(env, node[i]->port[1].wire);
 
+				// y[n] = 2/dt x[n] - s[n-1]
+				// s[n] = y[n] + 2/dt x[n]
 				iter = r_sys_add(iter, r_rel_eq(r_expr_vardup(diff), r_expr_sub(r_expr_vardup(src), r_expr_vardup(dest))));
 				iter = r_sys_add(iter, r_rel_eq(r_expr_add(r_expr_vardup(in), r_expr_vardup(out)), r_expr_zero()));
-				iter = r_sys_add(iter, r_rel_eq(r_expr_vardup(in),
+				struct r_var_t *t1;
+				iter = r_sys_add(iter, r_rel_eq(r_expr_sub(r_expr_vardup(out), r_expr_vardup(in)),
 					r_expr_mul(
 						r_expr_flt(node[i]->data.flt),
-						r_expr_add(
-							r_expr_mul(
-								r_expr_div(r_expr_flt(2.0), r_expr_const(strdup("dt"))),
-								r_expr_vardup(diff)
-							),
-							r_expr_const(strdup("s'"))
+						r_expr_var(t1 = r_var_new(strdup("t1")))
+					)
+				));
+				iter = r_sys_add(iter, r_rel_eq(
+					r_expr_var(r_var_copy(t1)),
+					r_expr_sub(
+						r_expr_mul(
+							r_expr_div(r_expr_flt(2.0), r_expr_const(strdup("dt"))),
+							r_expr_vardup(diff)
+						),
+						r_expr_const(strdup("s1'"))
+					)
+				));
+				iter = r_sys_add(iter, r_rel_eq(r_expr_var(r_var_new(strdup("s1"))),
+					r_expr_add(
+						r_expr_vardup(out),
+						r_expr_mul(
+							r_expr_div(r_expr_flt(2.0), r_expr_const(strdup("dt"))),
+							r_expr_vardup(diff)
 						)
 					)
 				));

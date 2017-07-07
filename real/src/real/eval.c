@@ -119,6 +119,7 @@ char *r_eval_expr(struct r_expr_t *expr, struct r_env_t *env, double *res)
 
 	case r_neg_v:
 		chkret(r_eval_expr(expr->data.expr, env, res));
+		*res = -*res;
 		break;
 
 	case r_add_v:
